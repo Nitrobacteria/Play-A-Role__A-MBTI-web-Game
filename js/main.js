@@ -1,3 +1,13 @@
+// 检测是否为移动端
+let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// 允许用户手动覆盖（在控制台执行 window.toggleDevice() 可切换）
+function toggleDevice() {
+    isMobile = !isMobile;
+    renderUI(); // 重新渲染
+    console.log('已切换到', isMobile ? '移动端模式' : '电脑端模式');
+}
+
 // ========== 游戏模式 ==========
 let gameMode = 'consultation';
 let tutorialStep = 0;
@@ -867,6 +877,12 @@ function renderUI() {
             <div class="choice-tip" id="choiceTip"></div>
             <div class="preview-hint" id="previewHint"></div>
         </div>
+        ${isMobile ? `
+        <div style="display: flex; gap: 16px; margin-top: 16px;">
+            <button id="choiceBtnA" class="choice-btn-mobile" style="flex:1;">← ${currentEvent.choiceA.text}</button>
+            <button id="choiceBtnB" class="choice-btn-mobile" style="flex:1;">${currentEvent.choiceB.text} →</button>
+        </div>
+        ` : ''}
         <button class="reset-btn" id="resetGameBtnFooter">🔄 重新开始</button>
     `;
 
@@ -874,70 +890,80 @@ function renderUI() {
     document.getElementById('btnToggleSFX')?.addEventListener('click', toggleSFX);
     updateAudioButtons();
 
-    const eventCard = document.getElementById('eventCard');
-    const choiceTip = document.getElementById('choiceTip');
     const resetBtn = document.getElementById('resetGameBtnFooter');
-    
     if (resetBtn) resetBtn.addEventListener('click', resetGame);
-    if (!eventCard) return;
 
-    let currentSide = null;
-    let isAnimating = false;
+    // 根据设备类型绑定不同的事件
+    if (isMobile) {
+        // 移动端：按钮模式
+        const btnA = document.getElementById('choiceBtnA');
+        const btnB = document.getElementById('choiceBtnB');
+        if (btnA) btnA.addEventListener('click', () => makeChoice(currentEvent.choiceA));
+        if (btnB) btnB.addEventListener('click', () => makeChoice(currentEvent.choiceB));
+    } else {
+        // 电脑端：滑动模式
+        const eventCard = document.getElementById('eventCard');
+        const choiceTip = document.getElementById('choiceTip');
+        if (!eventCard) return;
 
-    function clearHover() {
-        if (isAnimating) return;
-        currentSide = null;
-        eventCard.classList.remove('slide-left', 'slide-right');
-        if (choiceTip) choiceTip.style.opacity = '0';
-        clearAllHoverEffects();
-    }
+        let currentSide = null;
+        let isAnimating = false;
 
-    function updateHoverSide(clientX) {
-        if (isAnimating) return;
-        const rect = eventCard.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const newSide = clientX < centerX ? 'left' : 'right';
-        
-        if (newSide !== currentSide) {
-            currentSide = newSide;
+        function clearHover() {
+            if (isAnimating) return;
+            currentSide = null;
             eventCard.classList.remove('slide-left', 'slide-right');
-            
-            if (currentSide === 'left') {
-                eventCard.classList.add('slide-left');
-                if (choiceTip) {
-                    choiceTip.innerHTML = `← ${currentEvent.choiceA.text}`;
-                    choiceTip.style.opacity = '1';
-                }
-                previewEffects(currentEvent.choiceA.effects || {});
-            } else {
-                eventCard.classList.add('slide-right');
-                if (choiceTip) {
-                    choiceTip.innerHTML = `${currentEvent.choiceB.text} →`;
-                    choiceTip.style.opacity = '1';
-                }
-                previewEffects(currentEvent.choiceB.effects || {});
-            }
-            playCardSlide();
+            if (choiceTip) choiceTip.style.opacity = '0';
+            clearAllHoverEffects();
         }
-    }
 
-    function confirmSelection() {
-        if (isAnimating || !currentSide) return;
-        
-        const choice = currentSide === 'left' ? currentEvent.choiceA : currentEvent.choiceB;
-        isAnimating = true;
-        eventCard.classList.add(currentSide === 'left' ? 'exit-left' : 'exit-right');
-        clearHover();
-        
-        setTimeout(() => {
-            makeChoice(choice);
-            isAnimating = false;
-        }, 260);
-    }
+        function updateHoverSide(clientX) {
+            if (isAnimating) return;
+            const rect = eventCard.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const newSide = clientX < centerX ? 'left' : 'right';
+            
+            if (newSide !== currentSide) {
+                currentSide = newSide;
+                eventCard.classList.remove('slide-left', 'slide-right');
+                
+                if (currentSide === 'left') {
+                    eventCard.classList.add('slide-left');
+                    if (choiceTip) {
+                        choiceTip.innerHTML = `← ${currentEvent.choiceA.text}`;
+                        choiceTip.style.opacity = '1';
+                    }
+                    previewEffects(currentEvent.choiceA.effects || {});
+                } else {
+                    eventCard.classList.add('slide-right');
+                    if (choiceTip) {
+                        choiceTip.innerHTML = `${currentEvent.choiceB.text} →`;
+                        choiceTip.style.opacity = '1';
+                    }
+                    previewEffects(currentEvent.choiceB.effects || {});
+                }
+                playCardSlide();
+            }
+        }
 
-    eventCard.addEventListener('mousemove', (e) => updateHoverSide(e.clientX));
-    eventCard.addEventListener('mouseleave', clearHover);
-    eventCard.addEventListener('click', confirmSelection);
+        function confirmSelection() {
+            if (isAnimating || !currentSide) return;
+            
+            const choice = currentSide === 'left' ? currentEvent.choiceA : currentEvent.choiceB;
+            isAnimating = true;
+            eventCard.classList.add(currentSide === 'left' ? 'exit-left' : 'exit-right');
+            clearHover();
+            
+            setTimeout(() => {
+                makeChoice(choice);
+                isAnimating = false;
+            }, 260);
+        }
+
+        eventCard.addEventListener('mousemove', (e) => updateHoverSide(e.clientX));
+        eventCard.addEventListener('mouseleave', clearHover);
+        eventCard.addEventListener('click', confirmSelection);
+    }
 }
 
 // ========== 核心选择逻辑 ==========
