@@ -426,14 +426,14 @@ function showGuideStep() {
             
         </div>
         ${isMobile ? `
-        <div style="display: flex; gap: 16px; margin-top: 16px;">
-            <button id="choiceBtnA" class="choice-btn-mobile" style="flex:1;">← 直接开始游戏</button>
-            <button id="choiceBtnB" class="choice-btn-mobile" style="flex:1;">继续 →</button>
-        </div>
-        <div class="tutorial-tip" style="position: static; margin-top: 12px;">💡 点击按钮选择</div>
-        ` : `
-        <div class="tutorial-tip">← 左滑：直接开始游戏 &nbsp;&nbsp;&nbsp;&nbsp; 右滑：继续 →</div>
-        `}
+<div style="display: flex; gap: 16px; margin-top: 20px; padding: 0 16px;">
+    <button id="choiceBtnA" class="choice-btn-mobile" style="flex:1;">← 直接开始</button>
+    <button id="choiceBtnB" class="choice-btn-mobile" style="flex:1;">继续 →</button>
+</div>
+<div style="text-align: center; margin-top: 16px; font-size: 12px; color: #8c9aaa;">💡 点击按钮继续</div>
+` : `
+<div class="tutorial-tip">← 左滑：直接开始游戏 &nbsp;&nbsp;&nbsp;&nbsp; 右滑：继续 →</div>
+`}
     `;
     
     document.getElementById('btnToggleBGM')?.addEventListener('click', toggleBGM);
