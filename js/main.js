@@ -402,7 +402,6 @@ function startGuideDialog() {
 
 function showGuideStep() {
     if (guideStep >= guideDialogs.length) {
-        // 引导结束，开始4个维度的问题
         startDimensionQuestions();
         return;
     }
@@ -410,15 +409,14 @@ function showGuideStep() {
     const dialog = guideDialogs[guideStep];
     const root = getRoot();
     if (!root) return;
+    
     root.innerHTML = `
         <div class="audio-controls">
             <button class="audio-btn" id="btnToggleBGM">🎵</button>
             <button class="audio-btn" id="btnToggleSFX">🔊</button>
         </div>
         <div class="consultation-container">
-             
-            <div class="doctor-name">心理咨询师</div>
-            <div class="card-text" style="margin-top: 0;">
+            <div class="doctor-avatar"> </div><div class="card-text" style="margin-top: 0;">
                 <div class="event-title">📜 ${dialog.title}</div>
                 <div class="event-desc">${dialog.desc}</div>
             </div>
@@ -427,97 +425,106 @@ function showGuideStep() {
             </div>
             
         </div>
-        
+        ${isMobile ? `
+        <div style="display: flex; gap: 16px; margin-top: 16px;">
+            <button id="choiceBtnA" class="choice-btn-mobile" style="flex:1;">← 直接开始游戏</button>
+            <button id="choiceBtnB" class="choice-btn-mobile" style="flex:1;">继续 →</button>
+        </div>
+        <div class="tutorial-tip" style="position: static; margin-top: 12px;">💡 点击按钮选择</div>
+        ` : `
+        <div class="tutorial-tip">← 左滑：直接开始游戏 &nbsp;&nbsp;&nbsp;&nbsp; 右滑：继续 →</div>
+        `}
     `;
     
     document.getElementById('btnToggleBGM')?.addEventListener('click', toggleBGM);
     document.getElementById('btnToggleSFX')?.addEventListener('click', toggleSFX);
     updateAudioButtons();
     
-    const guideCard = document.getElementById('guideCard');
-    if (!guideCard) return;
-    
-    let currentSide = null;
-    let isAnimating = false;
-    
-    function clearSlide() {
-        if (isAnimating) return;
-        currentSide = null;
-        guideCard.classList.remove('slide-left', 'slide-right');
-        const tip = document.getElementById('choiceTip');
-        if (tip) tip.style.opacity = '0';
-    }
-    
-    function updateSlide(clientX) {
-        if (isAnimating) return;
-        const rect = guideCard.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const newSide = clientX < centerX ? 'left' : 'right';
+    if (isMobile) {
+        // 移动端：按钮模式
+        const btnA = document.getElementById('choiceBtnA');
+        const btnB = document.getElementById('choiceBtnB');
+        if (btnA) btnA.addEventListener('click', () => {
+            startDimensionQuestions();
+        });
+        if (btnB) btnB.addEventListener('click', () => {
+            guideStep++;
+            showGuideStep();
+        });
+    } else {
+        // 电脑端：滑动模式
+        const guideCard = document.getElementById('guideCard');
+        if (!guideCard) return;
         
-        if (newSide !== currentSide) {
-            currentSide = newSide;
+        let currentSide = null;
+        let isAnimating = false;
+        
+        function clearSlide() {
+            if (isAnimating) return;
+            currentSide = null;
             guideCard.classList.remove('slide-left', 'slide-right');
             const tip = document.getElementById('choiceTip');
-            if(guideStep<=0){
-                if (currentSide === 'left') {
-                guideCard.classList.add('slide-left');
-                if (tip) {
-                    tip.innerHTML = "← 直接进入正题吧（开始游戏）";
-                    tip.style.opacity = '1';
-                }
-            } else {
-                guideCard.classList.add('slide-right');
-                if (tip) {
-                    tip.innerHTML = "刚刚咱们聊到哪了（游戏基本介绍 →";
-                    tip.style.opacity = '1';
-                }
-            }
-            }else{
-                if (currentSide === 'left') {
-                guideCard.classList.add('slide-left');
-                if (tip) {
-                    tip.innerHTML = "← 直接进入正题吧（开始游戏）";
-                    tip.style.opacity = '1';
-                }
-            } else {
-                guideCard.classList.add('slide-right');
-                if (tip) {
-                    tip.innerHTML = "嗯（继续） →";
-                    tip.style.opacity = '1';
-                }
-            }
-            }
-            
-            playCardSlide();
+            if (tip) tip.style.opacity = '0';
         }
-    }
-    
-    function confirmSelection(e) {
-        if (isAnimating) return;
-        const rect = guideCard.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const side = e.clientX < centerX ? 'left' : 'right';
         
-        isAnimating = true;
-        guideCard.classList.add(side === 'left' ? 'exit-left' : 'exit-right');
-        clearSlide();
-        
-        setTimeout(() => {
-            if (side === 'left') {
-                // 直接开始游戏，跳过后续引导，直接进入4个维度问题
-                startDimensionQuestions();
-            } else {
-                // 继续下一段引导
-                guideStep++;
-                showGuideStep();
+        function updateSlide(clientX) {
+            if (isAnimating) return;
+            const rect = guideCard.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const newSide = clientX < centerX ? 'left' : 'right';
+            
+            if (newSide !== currentSide) {
+                currentSide = newSide;
+                guideCard.classList.remove('slide-left', 'slide-right');
+                const tip = document.getElementById('choiceTip');
+                
+                if (currentSide === 'left') {
+                    guideCard.classList.add('slide-left');
+                    if (tip) {
+                        tip.innerHTML = "直接进入正题吧（跳过）";
+                        tip.style.opacity = '1';
+                    }
+                } else {
+                    guideCard.classList.add('slide-right');
+                    if (tip) {
+                        if(guideStep<=0){
+                            tip.innerHTML = "上次说到哪了（游戏介绍）";
+                        }else{
+                            tip.innerHTML = "嗯（继续）";
+                        }
+                        
+                        tip.style.opacity = '1';
+                    }
+                }
+                playCardSlide();
             }
-            isAnimating = false;
-        }, 260);
+        }
+        
+        function confirmSelection(e) {
+            if (isAnimating) return;
+            const rect = guideCard.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const side = e.clientX < centerX ? 'left' : 'right';
+            
+            isAnimating = true;
+            guideCard.classList.add(side === 'left' ? 'exit-left' : 'exit-right');
+            clearSlide();
+            
+            setTimeout(() => {
+                if (side === 'left') {
+                    startDimensionQuestions();
+                } else {
+                    guideStep++;
+                    showGuideStep();
+                }
+                isAnimating = false;
+            }, 260);
+        }
+        
+        guideCard.addEventListener('mousemove', (e) => updateSlide(e.clientX));
+        guideCard.addEventListener('mouseleave', clearSlide);
+        guideCard.addEventListener('click', confirmSelection);
     }
-    
-    guideCard.addEventListener('mousemove', (e) => updateSlide(e.clientX));
-    guideCard.addEventListener('mouseleave', clearSlide);
-    guideCard.addEventListener('click', confirmSelection);
 }
 
 function startDimensionQuestions() {
@@ -544,10 +551,9 @@ function startDimensionQuestions() {
 
 function showConsultationQuestion() {
     if (consultationStep >= consultationQuestions.length) {
-        // 四个问题答完，进入教学选择
         const teachChoiceEvent = {
             id: "teach_choice",
-            title: "   心理咨询师",
+            title: "  心理咨询师",
             desc: "那么... 我们直接开始模拟？还是先快速了解一下操作方法？",
             choiceA: { text: "🎮 直接开始", value: null, nextEventId: "start_simulation", effects: {} },
             choiceB: { text: "📖 教学", value: null, nextEventId: "start_tutorial", effects: {} }
@@ -568,8 +574,7 @@ function showConsultationQuestion() {
             <button class="audio-btn" id="btnToggleSFX">🔊</button>
         </div>
         <div class="consultation-container">
-             
-            <div class="doctor-name">   心理咨询师</div>
+            <div class="doctor-avatar"> </div>
             <div class="card-text" style="margin-top: 0;">
                 <div class="event-title">📜 ${q.title}</div>
                 <div class="event-desc">${q.desc}</div>
@@ -579,78 +584,107 @@ function showConsultationQuestion() {
             </div>
             
         </div>
+        ${isMobile ? `
+        <div style="display: flex; gap: 16px; margin-top: 16px;">
+            <button id="choiceBtnA" class="choice-btn-mobile" style="flex:1;">← ${q.choiceA.text}</button>
+            <button id="choiceBtnB" class="choice-btn-mobile" style="flex:1;">${q.choiceB.text} →</button>
+        </div>
+        ` : ''}
     `;
     
     document.getElementById('btnToggleBGM')?.addEventListener('click', toggleBGM);
     document.getElementById('btnToggleSFX')?.addEventListener('click', toggleSFX);
     updateAudioButtons();
     
-    const questionCard = document.getElementById('questionCard');
-    if (!questionCard) return;
-    
-    let currentSide = null;
-    let isAnimating = false;
-    
-    function clearSlide() {
-        if (isAnimating) return;
-        currentSide = null;
-        questionCard.classList.remove('slide-left', 'slide-right');
-        const tip = document.getElementById('choiceTip');
-        if (tip) tip.style.opacity = '0';
-    }
-    
-    function updateSlide(clientX) {
-        if (isAnimating) return;
-        const rect = questionCard.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const newSide = clientX < centerX ? 'left' : 'right';
-        
-        if (newSide !== currentSide) {
-            currentSide = newSide;
-            questionCard.classList.remove('slide-left', 'slide-right');
-            const tip = document.getElementById('choiceTip');
-            
-            if (currentSide === 'left') {
-                questionCard.classList.add('slide-left');
-                if (tip) {
-                    tip.innerHTML = `← ${q.choiceA.text}`;
-                    tip.style.opacity = '1';
-                }
-            } else {
-                questionCard.classList.add('slide-right');
-                if (tip) {
-                    tip.innerHTML = `${q.choiceB.text} →`;
-                    tip.style.opacity = '1';
-                }
-            }
-            playCardSlide();
-        }
-    }
-    
-    function confirmSelection() {
-        if (isAnimating || !currentSide) return;
-        
-        const choice = currentSide === 'left' ? q.choiceA : q.choiceB;
-        isAnimating = true;
-        questionCard.classList.add(currentSide === 'left' ? 'exit-left' : 'exit-right');
-        clearSlide();
-        
-        setTimeout(() => {
-            // 记录选择
+    if (isMobile) {
+        // 移动端：按钮模式
+        const btnA = document.getElementById('choiceBtnA');
+        const btnB = document.getElementById('choiceBtnB');
+        if (btnA) btnA.addEventListener('click', () => {
+            const choice = q.choiceA;
             tempPersonality[q.dim] = choice.value;
             unlockedDimensions[q.dim] = true;
             gameState[q.dim] = choice.value;
             gameState.startPersonality[q.dim] = choice.value;
-            
             consultationStep++;
             showConsultationQuestion();
-            isAnimating = false;
-        }, 260);
+        });
+        if (btnB) btnB.addEventListener('click', () => {
+            const choice = q.choiceB;
+            tempPersonality[q.dim] = choice.value;
+            unlockedDimensions[q.dim] = true;
+            gameState[q.dim] = choice.value;
+            gameState.startPersonality[q.dim] = choice.value;
+            consultationStep++;
+            showConsultationQuestion();
+        });
+    } else {
+        // 电脑端：滑动模式
+        const questionCard = document.getElementById('questionCard');
+        if (!questionCard) return;
+        
+        let currentSide = null;
+        let isAnimating = false;
+        
+        function clearSlide() {
+            if (isAnimating) return;
+            currentSide = null;
+            questionCard.classList.remove('slide-left', 'slide-right');
+            const tip = document.getElementById('choiceTip');
+            if (tip) tip.style.opacity = '0';
+        }
+        
+        function updateSlide(clientX) {
+            if (isAnimating) return;
+            const rect = questionCard.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const newSide = clientX < centerX ? 'left' : 'right';
+            
+            if (newSide !== currentSide) {
+                currentSide = newSide;
+                questionCard.classList.remove('slide-left', 'slide-right');
+                const tip = document.getElementById('choiceTip');
+                
+                if (currentSide === 'left') {
+                    questionCard.classList.add('slide-left');
+                    if (tip) {
+                        tip.innerHTML = `← ${q.choiceA.text}`;
+                        tip.style.opacity = '1';
+                    }
+                } else {
+                    questionCard.classList.add('slide-right');
+                    if (tip) {
+                        tip.innerHTML = `${q.choiceB.text} →`;
+                        tip.style.opacity = '1';
+                    }
+                }
+                playCardSlide();
+            }
+        }
+        
+        function confirmSelection() {
+            if (isAnimating || !currentSide) return;
+            
+            const choice = currentSide === 'left' ? q.choiceA : q.choiceB;
+            isAnimating = true;
+            questionCard.classList.add(currentSide === 'left' ? 'exit-left' : 'exit-right');
+            clearSlide();
+            
+            setTimeout(() => {
+                tempPersonality[q.dim] = choice.value;
+                unlockedDimensions[q.dim] = true;
+                gameState[q.dim] = choice.value;
+                gameState.startPersonality[q.dim] = choice.value;
+                consultationStep++;
+                showConsultationQuestion();
+                isAnimating = false;
+            }, 260);
+        }
+        
+        questionCard.addEventListener('mousemove', (e) => updateSlide(e.clientX));
+        questionCard.addEventListener('mouseleave', clearSlide);
+        questionCard.addEventListener('click', confirmSelection);
     }
-    
-    questionCard.addEventListener('mousemove', (e) => updateSlide(e.clientX));
-    questionCard.addEventListener('mouseleave', clearSlide);
-    questionCard.addEventListener('click', confirmSelection);
 }
 // ========== 简化结局界面 ==========
 function showConclusion() {
